@@ -105,6 +105,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         player.sendMessage(config.getString("messages.incoming", "§6Incoming {TYPE}!")
                 .replace("{TYPE}", type.toUpperCase()));
 
+        // One-Time-Use: Angel kaputt
         Bukkit.getScheduler().runTaskLater(this, () -> {
             ItemStack hand = player.getInventory().getItemInMainHand();
             if (hand.getType() == Material.FISHING_ROD && hand.hasItemMeta() &&
@@ -114,10 +115,8 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             }
         }, 1);
 
+        // NUR TNT – KEIN SOUND, KEINE PARTIKEL
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            world.playSound(target, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.5f);
-            world.spawnParticle(Particle.CLOUD, target, 50, 10, 10, 10, 0.1);
-
             nukeTNT.clear();
             if (type.equals("nuke")) {
                 spawnNuke(world, target);
