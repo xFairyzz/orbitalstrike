@@ -1,7 +1,7 @@
 # OrbitalStrike
 
 **Epic orbital strikes like Wemmbu — Nuke & Stab in one plugin!**  
-A powerful Spigot plugin for **Minecraft 1.21.1** featuring two devastating fishing rod weapons:
+A powerful Spigot plugin for **Minecraft 1.21.1 - 1.21.10** featuring two devastating fishing rod weapons:
 
 - `/orbital nuke` → **Massive crater with 10 rings + center TNT**  
 - `/orbital stab` → **Instant full-depth tunnel to bedrock**
@@ -13,12 +13,11 @@ A powerful Spigot plugin for **Minecraft 1.21.1** featuring two devastating fish
 | Feature | Description |
 |--------|-------------|
 | **Nuke Strike** | 10 rings + center, all TNT drops simultaneously from above, explodes **2 seconds after impact** |
-| **Stab Strike** | Instant 3x3+ tunnel straight down to bedrock |
+| **Stab Strike** | Instant tunnel straight down to bedrock |
 | **One-Time Use** | Rod breaks after single use |
 | **Fully Configurable** | `config.yml` for rings, yield, height, delay |
 | **Permission System** | `orbital.use` — easy with LuckPerms |
-| **No Cooldown** | Spam allowed |
-| **No Particles/Sound** | Clean, pure TNT destruction only |
+| **No Cooldown** | Spam allowed (can crash or lag the Server)|
 
 ---
 
