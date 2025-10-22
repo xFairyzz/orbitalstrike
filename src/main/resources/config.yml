@@ -1,0 +1,21 @@
+# OrbitalStrike Config
+nuke:
+  rings: 10
+  height: 80
+  yield: 6.0
+  delay-after-impact: 40
+  tnt-per-ring-base: 40
+  tnt-per-ring-increase: 2
+  center-tnt: true
+
+stab:
+  yield: 4.0
+  tnt-offset: 0.3
+
+permission: "orbital.use"
+permission-message: "§cYou don't have permission to use Orbital Strike!"
+
+messages:
+  received: "§aReceived Orbital Strike Rod - §l{TYPE}§a!"
+  incoming: "§6Orbital Strike incoming... §l{TYPE}§6!"
+  no-target: "§cNo target found!"
