@@ -1,10 +1,10 @@
 package me.fairyzz.orbitalstrike;
 
-
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -20,11 +20,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, Listener {
+public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, Listener, TabCompleter {
 
     private final Set<UUID> nukeTNT = new HashSet<>();
     private FileConfiguration config;
@@ -34,9 +33,12 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         saveDefaultConfig();
         config = getConfig();
 
+        // Command + TabCompleter registrieren
         getCommand("orbital").setExecutor(this);
+        getCommand("orbital").setTabCompleter(this);
+
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("OrbitalStrike Plugin enabled!");
+        getLogger().info("OrbitalStrike Plugin enabled");
     }
 
     @Override
@@ -105,7 +107,6 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         player.sendMessage(config.getString("messages.incoming", "§6Incoming {TYPE}!")
                 .replace("{TYPE}", type.toUpperCase()));
 
-        // One-Time-Use: Angel kaputt
         Bukkit.getScheduler().runTaskLater(this, () -> {
             ItemStack hand = player.getInventory().getItemInMainHand();
             if (hand.getType() == Material.FISHING_ROD && hand.hasItemMeta() &&
@@ -115,7 +116,6 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             }
         }, 1);
 
-        // NUR TNT – KEIN SOUND, KEINE PARTIKEL
         Bukkit.getScheduler().runTaskLater(this, () -> {
             nukeTNT.clear();
             if (type.equals("nuke")) {
@@ -239,5 +239,20 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         TNTPrimed tnt = (TNTPrimed) world.spawnEntity(loc, EntityType.TNT);
         tnt.setFuseTicks(0);
         tnt.setYield(yield);
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!command.getName().equalsIgnoreCase("orbital") || args.length != 1) {
+            return null;
+        }
+
+        String input = args[0].toLowerCase();
+        List<String> options = Arrays.asList("nuke", "stab");
+
+        return options.stream()
+                .filter(opt -> opt.startsWith(input))
+                .sorted()
+                .collect(Collectors.toList());
     }
 }
