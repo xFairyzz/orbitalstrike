@@ -33,12 +33,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         saveDefaultConfig();
         config = getConfig();
 
-        // Command + TabCompleter registrieren
         getCommand("orbital").setExecutor(this);
         getCommand("orbital").setTabCompleter(this);
 
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("OrbitalStrike Plugin enabled");
     }
 
     @Override
