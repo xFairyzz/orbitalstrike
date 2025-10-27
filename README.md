@@ -1,4 +1,4 @@
-# OrbitalStrike Minecraft Pluginv
+# OrbitalStrike Minecraft Plugin
 
 **Epic orbital strikes like Wemmbu — Nuke & Stab in one plugin!**  
 A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring two devastating fishing rod weapons:
