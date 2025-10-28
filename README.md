@@ -48,6 +48,8 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring two devastating f
 ## Configuration (`config.yml`)
 
 ```yaml
+messages-enabled: true
+
 nuke:
   rings: 10
   height: 80
