@@ -1,4 +1,5 @@
-# OrbitalStrike Config
+messages-enabled: true
+
 nuke:
   rings: 10
   height: 80

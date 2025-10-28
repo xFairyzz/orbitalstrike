@@ -30,12 +30,15 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
     @Override
     public void onEnable() {
+
         saveDefaultConfig();
         config = getConfig();
 
+        setDefaults();
+        saveConfig();
+
         getCommand("orbital").setExecutor(this);
         getCommand("orbital").setTabCompleter(this);
-
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -52,18 +55,18 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         }
 
         if (!player.hasPermission(config.getString("permission", "orbital.use"))) {
-            player.sendMessage(config.getString("permission-message", "§cNo permission!"));
+            sendMessage(player, "permission", Map.of());
             return true;
         }
 
         if (args.length != 1) {
-            player.sendMessage("§cUsage: /orbital <nuke|stab>");
+            sendMessage(player, "usage", Map.of("{CMD}", "/orbital <nuke|stab>"));
             return true;
         }
 
         String type = args[0].toLowerCase();
         if (!type.equals("nuke") && !type.equals("stab")) {
-            player.sendMessage("§cInvalid type: use 'nuke' or 'stab'");
+            sendMessage(player, "invalid-type", Map.of());
             return true;
         }
 
@@ -74,8 +77,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         rod.setItemMeta(meta);
 
         player.getInventory().addItem(rod);
-        player.sendMessage(config.getString("messages.received", "§aReceived {TYPE}!")
-                .replace("{TYPE}", type.toUpperCase()));
+        sendMessage(player, "received", Map.of("{TYPE}", type.toUpperCase()));
 
         return true;
     }
@@ -93,7 +95,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         Player player = event.getPlayer();
         RayTraceResult result = player.rayTraceBlocks(100);
         if (result == null || result.getHitBlock() == null) {
-            player.sendMessage(config.getString("messages.no-target", "§cNo target!"));
+            sendMessage(player, "no-target", Map.of());
             return;
         }
 
@@ -102,8 +104,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
         String type = name.substring(name.lastIndexOf(" - ") + 3).toLowerCase();
 
-        player.sendMessage(config.getString("messages.incoming", "§6Incoming {TYPE}!")
-                .replace("{TYPE}", type.toUpperCase()));
+        sendMessage(player, "incoming", Map.of("{TYPE}", type.toUpperCase()));
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
             ItemStack hand = player.getInventory().getItemInMainHand();
@@ -161,11 +162,9 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         int rings = config.getInt("nuke.rings", 10);
         double height = center.getY() + config.getInt("nuke.height", 80);
         float yield = (float) config.getDouble("nuke.yield", 6.0);
-        int baseTnt = config.getInt("nuke.tnt-per-ring-base", 20);
+        int baseTnt = config.getInt("nuke.tnt-per-ring-base", 40);
         int increase = config.getInt("nuke.tnt-per-ring-increase", 2);
         boolean centerTnt = config.getBoolean("nuke.center-tnt", true);
-
-        int spawned = 0;
 
         if (centerTnt) {
             Location loc = new Location(world, center.getX() + 0.5, height, center.getZ() + 0.5);
@@ -184,31 +183,27 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
                 Location loc = new Location(world, x + 0.5, height, z + 0.5);
 
                 spawnNukeTNT(world, loc, yield);
-                spawned++;
-                if (spawned % 50 == 0) {
-                    try { Thread.sleep(1); } catch (Exception e) {}
-                }
             }
         }
     }
 
     private void spawnNukeTNT(World world, Location loc, float yield) {
-        int cx = (int) loc.getBlockX() >> 4;
-        int cz = (int) loc.getBlockZ() >> 4;
-        if (world.isChunkLoaded(cx, cz)) {
-            TNTPrimed tnt = (TNTPrimed) world.spawnEntity(loc, EntityType.TNT);
-            tnt.setFuseTicks(10000);
-            tnt.setVelocity(new Vector(0, -0.8, 0));
-            tnt.setYield(yield);
-            nukeTNT.add(tnt.getUniqueId());
+        int cx = loc.getBlockX() >> 4;
+        int cz = loc.getBlockZ() >> 4;
+        if (!world.isChunkLoaded(cx, cz)) return;
 
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                if (nukeTNT.contains(tnt.getUniqueId()) && !tnt.isDead()) {
-                    tnt.setFuseTicks(1);
-                    nukeTNT.remove(tnt.getUniqueId());
-                }
-            }, 120);
-        }
+        TNTPrimed tnt = (TNTPrimed) world.spawnEntity(loc, EntityType.TNT);
+        tnt.setFuseTicks(10000);
+        tnt.setVelocity(new Vector(0, -0.8, 0));
+        tnt.setYield(yield);
+        nukeTNT.add(tnt.getUniqueId());
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (nukeTNT.contains(tnt.getUniqueId()) && !tnt.isDead()) {
+                tnt.setFuseTicks(1);
+                nukeTNT.remove(tnt.getUniqueId());
+            }
+        }, 120);
     }
 
     private void spawnStab(World world, Location center) {
@@ -246,11 +241,51 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         }
 
         String input = args[0].toLowerCase();
-        List<String> options = Arrays.asList("nuke", "stab");
-
-        return options.stream()
+        return Arrays.asList("nuke", "stab").stream()
                 .filter(opt -> opt.startsWith(input))
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    private void setDefaults() {
+        config.addDefault("messages-enabled", true);
+        config.addDefault("permission", "orbital.use");
+
+        Map<String, Object> nuke = new HashMap<>();
+        nuke.put("rings", 10);
+        nuke.put("height", 80);
+        nuke.put("yield", 6.0);
+        nuke.put("delay-after-impact", 40);
+        nuke.put("tnt-per-ring-base", 40);
+        nuke.put("tnt-per-ring-increase", 2);
+        nuke.put("center-tnt", true);
+        config.addDefault("nuke", nuke);
+
+        Map<String, Object> stab = new HashMap<>();
+        stab.put("yield", 8.0);
+        stab.put("tnt-offset", 0.3);
+        config.addDefault("stab", stab);
+
+        Map<String, Object> messages = new HashMap<>();
+        messages.put("received", "§aReceived Orbital Strike Rod - §l{TYPE}§a!");
+        messages.put("incoming", "§6Orbital Strike incoming... §l{TYPE}§6!");
+        messages.put("no-target", "§cNo target found!");
+        config.addDefault("messages", messages);
+
+        config.options().copyDefaults(true);
+    }
+
+    private void sendMessage(Player player, String key, Map<String, String> placeholders) {
+        if (!config.getBoolean("messages-enabled", true)) return;
+
+        String path = key.contains(".") ? key : "messages." + key;
+        String message = config.getString(path);
+        if (message == null || message.isEmpty()) return;
+
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            message = message.replace(entry.getKey(), entry.getValue());
+        }
+
+        player.sendMessage(message);
     }
 }
