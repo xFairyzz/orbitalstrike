@@ -24,7 +24,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring two devastating f
 
 ## Installation
 
-1. Download `OrbitalStrike-1.0.jar`
+1. Download `OrbitalStrike-1.1.jar`
 2. Place it in your `plugins/` folder
 3. Go into **"spigot.yml"** and set **"max-tnt-per-tick"** to **1000** else it might cause problems
 4. **Start the server**
@@ -64,6 +64,7 @@ stab:
 permission: "orbital.use"
 permission-message: "§cYou don't have permission to use Orbital Strike!"
 
+messages-enabled: true
 messages:
   received: "§aReceived Orbital Strike Rod - §l{TYPE}§a!"
   incoming: "§6Orbital Strike incoming... §l{TYPE}§6!"
