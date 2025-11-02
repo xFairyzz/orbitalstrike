@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, Listener, TabCompleter {
 
-    private final Set<UUID> nukeTNT = new HashSet<>();
+    private final Map<UUID, Set<UUID>> strikeTNT = new HashMap<>();
     private FileConfiguration config;
 
     @Override
@@ -45,7 +45,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
     @Override
     public void onDisable() {
-        nukeTNT.clear();
+        strikeTNT.clear();
     }
 
     @Override
@@ -115,48 +115,47 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             }
         }, 1);
 
+        UUID strikeId = UUID.randomUUID();
+        Set<UUID> tntList = new HashSet<>();
+        strikeTNT.put(strikeId, tntList);
+
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            nukeTNT.clear();
             if (type.equals("nuke")) {
-                spawnNuke(world, target);
+                spawnNuke(world, target, strikeId, tntList);
             } else if (type.equals("stab")) {
                 spawnStab(world, target);
             } else if (type.equals("dogs")) {
                 spawnDogs(world, target, player);
             }
+
+            Bukkit.getScheduler().runTaskLater(this, () -> strikeTNT.remove(strikeId), 200);
         }, 0);
 
         event.setCancelled(true);
     }
 
     @EventHandler
-    public void onTNTCollide(VehicleBlockCollisionEvent event) {
-        if (!(event.getVehicle() instanceof TNTPrimed tnt)) return;
-        if (!nukeTNT.contains(tnt.getUniqueId())) return;
-        nukeTNT.remove(tnt.getUniqueId());
-        startExplosionDelay(tnt);
-    }
-
-    @EventHandler
     public void onTNTLand(EntityChangeBlockEvent event) {
         if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
-        if (!nukeTNT.contains(tnt.getUniqueId())) return;
-        if (event.getTo().isSolid() || event.getBlock().getType().isSolid()) {
-            nukeTNT.remove(tnt.getUniqueId());
+        UUID tntId = tnt.getUniqueId();
+        if (!isTrackedTNT(tntId)) return;
+
+        event.setCancelled(true);
+
+        if (event.getBlock().getType().isSolid()) {
+            removeFromTracking(tntId);
             startExplosionDelay(tnt);
-            event.setCancelled(true);
         }
     }
 
     private void startExplosionDelay(TNTPrimed tnt) {
-        int delay = config.getInt("nuke.delay-after-impact", 40);
+        int delay = config.getInt("nuke.delay-after-impact", 0);
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (!tnt.isDead()) tnt.setFuseTicks(1);
         }, delay);
     }
 
-    private void spawnNuke(World world, Location center) {
-        nukeTNT.clear();
+    private void spawnNuke(World world, Location center, UUID strikeId, Set<UUID> tntList) {
         int rings = config.getInt("nuke.rings", 10);
         double height = center.getY() + config.getInt("nuke.height", 80);
         float yield = (float) config.getDouble("nuke.yield", 6.0);
@@ -166,7 +165,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
         if (centerTnt) {
             Location loc = new Location(world, center.getX() + 0.5, height, center.getZ() + 0.5);
-            spawnNukeTNT(world, loc, yield);
+            spawnNukeTNT(world, loc, yield, strikeId, tntList);
         }
 
         for (int ring = 1; ring <= rings; ring++) {
@@ -177,27 +176,36 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
                 double angle = i * step + (ring * 10);
                 double x = center.getX() + radius * Math.cos(Math.toRadians(angle));
                 double z = center.getZ() + radius * Math.sin(Math.toRadians(angle));
-                Location loc = new Location(world, x + 0.5, height, z + 0.5);
-                spawnNukeTNT(world, loc, yield);
+                double roundedX = Math.round(x * 10) / 10.0;
+                double roundedZ = Math.round(z * 10) / 10.0;
+                Location loc = new Location(world, roundedX + 0.5, height, roundedZ + 0.5);
+                spawnNukeTNT(world, loc, yield, strikeId, tntList);
             }
         }
     }
 
-    private void spawnNukeTNT(World world, Location loc, float yield) {
+    private void spawnNukeTNT(World world, Location loc, float yield, UUID strikeId, Set<UUID> tntList) {
         int cx = loc.getBlockX() >> 4;
         int cz = loc.getBlockZ() >> 4;
         if (!world.isChunkLoaded(cx, cz)) return;
+
         TNTPrimed tnt = (TNTPrimed) world.spawnEntity(loc, EntityType.TNT);
         tnt.setFuseTicks(10000);
         tnt.setVelocity(new Vector(0, -0.8, 0));
+        tnt.setGravity(true);
         tnt.setYield(yield);
-        nukeTNT.add(tnt.getUniqueId());
+        tnt.setInvulnerable(true);
+
+        UUID tntId = tnt.getUniqueId();
+        tntList.add(tntId);
+
+        int fuseFallbackTicks = config.getInt("nuke.fuse-fallback-ticks", 160);
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (nukeTNT.contains(tnt.getUniqueId()) && !tnt.isDead()) {
+            if (tntList.contains(tntId) && !tnt.isDead()) {
                 tnt.setFuseTicks(1);
-                nukeTNT.remove(tnt.getUniqueId());
+                tntList.remove(tntId);
             }
-        }, 120);
+        }, fuseFallbackTicks);
     }
 
     private void spawnStab(World world, Location center) {
@@ -279,10 +287,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         nuke.put("rings", 10);
         nuke.put("height", 80);
         nuke.put("yield", 6.0);
-        nuke.put("delay-after-impact", 40);
         nuke.put("tnt-per-ring-base", 40);
         nuke.put("tnt-per-ring-increase", 2);
         nuke.put("center-tnt", true);
+        config.addDefault("nuke.fuse-fallback-ticks", 160);
         config.addDefault("nuke", nuke);
 
         Map<String, Object> stab = new HashMap<>();
@@ -314,5 +322,13 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             message = message.replace(entry.getKey(), entry.getValue());
         }
         player.sendMessage(message);
+    }
+
+    private boolean isTrackedTNT(UUID tntId) {
+        return strikeTNT.values().stream().anyMatch(set -> set.contains(tntId));
+    }
+
+    private void removeFromTracking(UUID tntId) {
+        strikeTNT.values().forEach(set -> set.remove(tntId));
     }
 }
