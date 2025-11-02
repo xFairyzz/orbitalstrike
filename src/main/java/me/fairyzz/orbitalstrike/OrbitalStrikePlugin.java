@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.Wolf;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
@@ -17,6 +18,8 @@ import org.bukkit.event.vehicle.VehicleBlockCollisionEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -30,10 +33,8 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
     @Override
     public void onEnable() {
-
         saveDefaultConfig();
         config = getConfig();
-
         setDefaults();
         saveConfig();
 
@@ -55,17 +56,17 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         }
 
         if (!player.hasPermission(config.getString("permission", "orbital.use"))) {
-            sendMessage(player, "permission", Map.of());
+            sendMessage(player, "no-permission", Map.of());
             return true;
         }
 
         if (args.length != 1) {
-            sendMessage(player, "usage", Map.of("{CMD}", "/orbital <nuke|stab>"));
+            sendMessage(player, "usage", Map.of("{CMD}", "/orbital <nuke|stab|dogs>"));
             return true;
         }
 
         String type = args[0].toLowerCase();
-        if (!type.equals("nuke") && !type.equals("stab")) {
+        if (!List.of("nuke", "stab", "dogs").contains(type)) {
             sendMessage(player, "invalid-type", Map.of());
             return true;
         }
@@ -75,10 +76,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         meta.setDisplayName("§cOrbital Strike Rod - " + type.toUpperCase());
         meta.setCustomModelData(12345);
         rod.setItemMeta(meta);
+        rod.setDurability((short) 63);
 
         player.getInventory().addItem(rod);
         sendMessage(player, "received", Map.of("{TYPE}", type.toUpperCase()));
-
         return true;
     }
 
@@ -101,7 +102,6 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
         Location target = result.getHitBlock().getLocation().add(0, 60, 0);
         World world = target.getWorld();
-
         String type = name.substring(name.lastIndexOf(" - ") + 3).toLowerCase();
 
         sendMessage(player, "incoming", Map.of("{TYPE}", type.toUpperCase()));
@@ -119,8 +119,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             nukeTNT.clear();
             if (type.equals("nuke")) {
                 spawnNuke(world, target);
-            } else {
+            } else if (type.equals("stab")) {
                 spawnStab(world, target);
+            } else if (type.equals("dogs")) {
+                spawnDogs(world, target, player);
             }
         }, 0);
 
@@ -131,7 +133,6 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     public void onTNTCollide(VehicleBlockCollisionEvent event) {
         if (!(event.getVehicle() instanceof TNTPrimed tnt)) return;
         if (!nukeTNT.contains(tnt.getUniqueId())) return;
-
         nukeTNT.remove(tnt.getUniqueId());
         startExplosionDelay(tnt);
     }
@@ -140,7 +141,6 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     public void onTNTLand(EntityChangeBlockEvent event) {
         if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
         if (!nukeTNT.contains(tnt.getUniqueId())) return;
-
         if (event.getTo().isSolid() || event.getBlock().getType().isSolid()) {
             nukeTNT.remove(tnt.getUniqueId());
             startExplosionDelay(tnt);
@@ -151,9 +151,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     private void startExplosionDelay(TNTPrimed tnt) {
         int delay = config.getInt("nuke.delay-after-impact", 40);
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (!tnt.isDead()) {
-                tnt.setFuseTicks(1);
-            }
+            if (!tnt.isDead()) tnt.setFuseTicks(1);
         }, delay);
     }
 
@@ -175,13 +173,11 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             double radius = ring * 4.0;
             int tntCount = baseTnt + ring * increase;
             double step = 360.0 / tntCount;
-
             for (int i = 0; i < tntCount; i++) {
                 double angle = i * step + (ring * 10);
                 double x = center.getX() + radius * Math.cos(Math.toRadians(angle));
                 double z = center.getZ() + radius * Math.sin(Math.toRadians(angle));
                 Location loc = new Location(world, x + 0.5, height, z + 0.5);
-
                 spawnNukeTNT(world, loc, yield);
             }
         }
@@ -191,13 +187,11 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         int cx = loc.getBlockX() >> 4;
         int cz = loc.getBlockZ() >> 4;
         if (!world.isChunkLoaded(cx, cz)) return;
-
         TNTPrimed tnt = (TNTPrimed) world.spawnEntity(loc, EntityType.TNT);
         tnt.setFuseTicks(10000);
         tnt.setVelocity(new Vector(0, -0.8, 0));
         tnt.setYield(yield);
         nukeTNT.add(tnt.getUniqueId());
-
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (nukeTNT.contains(tnt.getUniqueId()) && !tnt.isDead()) {
                 tnt.setFuseTicks(1);
@@ -212,13 +206,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             ground.subtract(0, 1, 0);
         }
         ground.add(0, 1, 0);
-
         float yield = (float) config.getDouble("stab.yield", 8.0);
         double offset = config.getDouble("stab.tnt-offset", 0.3);
-
         int y = (int) ground.getY();
         int minY = world.getMinHeight();
-
         while (y >= minY) {
             Location loc = new Location(world, ground.getX(), y, ground.getZ());
             spawnTNTAt(world, loc.clone().add(offset, 0, offset), yield);
@@ -234,14 +225,47 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         tnt.setYield(yield);
     }
 
+    private void spawnDogs(World world, Location center, Player owner) {
+        int count = config.getInt("dogs.count", 50);
+        double radius = config.getDouble("dogs.radius", 5.0);
+        int durationTicks = config.getInt("dogs.effect-duration", 2400);
+
+        Location ground = center.clone();
+        while (ground.getY() > world.getMinHeight() && ground.getBlock().getType().isAir()) {
+            ground.subtract(0, 1, 0);
+        }
+        ground.add(0, 1, 0);
+
+        for (int i = 0; i < count; i++) {
+            double angle = Math.random() * 360;
+            double dist = Math.random() * radius;
+            double x = ground.getX() + dist * Math.cos(Math.toRadians(angle));
+            double z = ground.getZ() + dist * Math.sin(Math.toRadians(angle));
+            Location loc = new Location(world, x, ground.getY(), z);
+
+            while (loc.getY() > world.getMinHeight() && loc.getBlock().getType().isAir()) {
+                loc.subtract(0, 1, 0);
+            }
+            loc.add(0, 1, 0);
+
+            if (loc.getBlock().isLiquid()) continue;
+
+            Wolf wolf = (Wolf) world.spawnEntity(loc, EntityType.WOLF);
+            wolf.setTamed(true);
+            wolf.setOwner(owner);
+            wolf.setSitting(false);
+            wolf.setCollarColor(DyeColor.RED);
+
+            wolf.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, durationTicks, 1));
+            wolf.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, durationTicks, 1));
+        }
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!command.getName().equalsIgnoreCase("orbital") || args.length != 1) {
-            return null;
-        }
-
+        if (!command.getName().equalsIgnoreCase("orbital") || args.length != 1) return null;
         String input = args[0].toLowerCase();
-        return Arrays.asList("nuke", "stab").stream()
+        return Arrays.asList("nuke", "stab", "dogs").stream()
                 .filter(opt -> opt.startsWith(input))
                 .sorted()
                 .collect(Collectors.toList());
@@ -266,10 +290,16 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         stab.put("tnt-offset", 0.3);
         config.addDefault("stab", stab);
 
+        Map<String, Object> dogs = new HashMap<>();
+        dogs.put("count", 50);
+        dogs.put("radius", 5.0);
+        dogs.put("effect-duration", 2400);
+        config.addDefault("dogs", dogs);
+
         Map<String, Object> messages = new HashMap<>();
-        messages.put("received", "§aReceived Orbital Strike Rod - §l{TYPE}§a!");
+        messages.put("received", "§aYou received an Orbital Strike Rod - §l{TYPE}§a!");
         messages.put("incoming", "§6Orbital Strike incoming... §l{TYPE}§6!");
-        messages.put("no-target", "§cNo target found!");
+        messages.put("no-target", "§cNo valid target found!");
         config.addDefault("messages", messages);
 
         config.options().copyDefaults(true);
@@ -277,15 +307,12 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
 
     private void sendMessage(Player player, String key, Map<String, String> placeholders) {
         if (!config.getBoolean("messages-enabled", true)) return;
-
-        String path = key.contains(".") ? key : "messages." + key;
+        String path = "messages." + key;
         String message = config.getString(path);
         if (message == null || message.isEmpty()) return;
-
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             message = message.replace(entry.getKey(), entry.getValue());
         }
-
         player.sendMessage(message);
     }
 }

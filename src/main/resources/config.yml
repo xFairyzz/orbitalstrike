@@ -13,10 +13,14 @@ stab:
   yield: 4.0
   tnt-offset: 0.3
 
+dogs:
+  count: 50
+  radius: 5.0
+  effect-duration: 2400   # 4 Minutes (20 Ticks = 1 Second)
+
 permission: "orbital.use"
-permission-message: "§cYou don't have permission to use Orbital Strike!"
 
 messages:
-  received: "§aReceived Orbital Strike Rod - §l{TYPE}§a!"
+  received: "§aYou received an Orbital Strike Rod - §l{TYPE}§a!"
   incoming: "§6Orbital Strike incoming... §l{TYPE}§6!"
-  no-target: "§cNo target found!"
+  no-target: "§cNo valid target found!"
