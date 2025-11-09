@@ -1,5 +1,7 @@
 messages-enabled: true
 
+rod-distance: 100 # Rod will work in 100 Blocks
+
 nuke:
   rings: 10
   height: 80
