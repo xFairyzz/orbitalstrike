@@ -50,6 +50,9 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 ## Configuration (`config.yml`)
 
 ```yaml
+messages-enabled: true
+
+rod-distance: 100 # Rod will work in 100 Blocks
 
 nuke:
   rings: 10
