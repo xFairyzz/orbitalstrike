@@ -25,7 +25,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 
 ## Installation
 
-1. Download `OrbitalStrike-1.2.jar`
+1. Download `OrbitalStrike-1.3.0.jar`
 2. Place it in your `plugins/` folder
 3. Go into **"spigot.yml"** and set **"max-tnt-per-tick"** to **1000** else it might cause problems
 4. **Start the server**
@@ -51,18 +51,21 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 
 ```yaml
 messages-enabled: true
+permission: "orbital.use"
 
-rod-distance: 100 # Rod will work in 100 Blocks
+rod:
+  distance: 100
+  throw-rod: true
 
 nuke:
   rings: 10
-  height: 80
+  height: 15
   yield: 6.0
-  delay-after-impact: 40
   tnt-per-ring-base: 40
   tnt-per-ring-increase: 2
   center-tnt: true
   fuse-fallback-ticks: 160 # needs 8 Seconds to explode (20 ticks = 1 Second) (20x8=160)
+  Animated-rings: false
 
 stab:
   yield: 4.0
@@ -72,8 +75,9 @@ dogs:
   count: 50
   radius: 5.0
   effect-duration: 2400   # 4 Minutes (20 Ticks = 1 Second)
-
-permission: "orbital.use"
+  effects:
+    - "SPEED:1"
+    - "STRENGTH:2"
 
 messages:
   received: "§aYou received an Orbital Strike Rod - §l{TYPE}§a!"
