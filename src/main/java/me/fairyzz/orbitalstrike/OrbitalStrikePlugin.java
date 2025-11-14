@@ -38,7 +38,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     private FileConfiguration config;
 
     private static final String GITHUB_REPO = "xFairyzz/orbitalstrike";
-    private static final String CURRENT_VERSION = "v1.3.0";
+    private static final String CURRENT_VERSION = "v1.3.1";
     private boolean hasUpdate = false;
     private String latestVersion = "";
 
@@ -562,9 +562,9 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         ItemMeta meta = rod.getItemMeta();
 
         String displayName = switch (type) {
-            case "nuke" -> "§fNUKE SHOT";
-            case "stab" -> "§fSTAB SHOT";
-            case "dogs" -> "§fDOG SHOT";
+            case "nuke" -> "§fNuke shot";
+            case "stab" -> "§fStab shot";
+            case "dogs" -> "§fDog shot";
             default -> "§fOrbital Strike Rod";
         };
 
@@ -585,9 +585,9 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     private String getStrikeType(ItemStack item) {
         String displayName = item.getItemMeta().getDisplayName();
         return switch (displayName) {
-            case "§fNUKE SHOT" -> "nuke";
-            case "§fSTAB SHOT" -> "stab";
-            case "§fDOG SHOT" -> "dogs";
+            case "§fNuke shot" -> "nuke";
+            case "§fStab shot" -> "stab";
+            case "§fDog shot" -> "dogs";
             default -> null;
         };
     }

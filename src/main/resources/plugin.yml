@@ -1,5 +1,5 @@
 name: OrbitalStrike
-version: 1.3
+version: 1.3.1
 main: me.fairyzz.orbitalstrike.OrbitalStrikePlugin
 api-version: 1.21
 commands:
