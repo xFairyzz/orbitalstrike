@@ -20,6 +20,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.bukkit.event.entity.EntityPlaceEvent;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -31,14 +32,14 @@ import java.util.stream.Collectors;
 public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, Listener, TabCompleter {
 
     private static final int CUSTOM_MODEL_DATA = 12345;
-    private static final String[] STRIKE_TYPES = {"nuke", "stab", "dogs"};
+    private static final String[] STRIKE_TYPES = {"nuke", "stab", "dogs", "chunkeater"};
 
     private final Map<UUID, Set<UUID>> strikeTNT = new HashMap<>();
     private final Map<UUID, String> pendingStrikes = new HashMap<>();
     private FileConfiguration config;
 
     private static final String GITHUB_REPO = "xFairyzz/orbitalstrike";
-    private static final String CURRENT_VERSION = "v1.3.1";
+    private static final String CURRENT_VERSION = "v1.4.0";
     private boolean hasUpdate = false;
     private String latestVersion = "";
 
@@ -192,6 +193,11 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         if (type == null) return;
 
         Player player = event.getPlayer();
+
+        if (type.equals("chunkeater")) {
+            return;
+        }
+
         Location target = getTargetLocation(player);
 
         if (target == null) {
@@ -223,7 +229,10 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         }
 
         if (event.getState() != PlayerFishEvent.State.REEL_IN &&
-                event.getState() != PlayerFishEvent.State.FAILED_ATTEMPT) {
+                event.getState() != PlayerFishEvent.State.FAILED_ATTEMPT &&
+                event.getState() != PlayerFishEvent.State.CAUGHT_ENTITY &&
+                event.getState() != PlayerFishEvent.State.IN_GROUND &&
+                event.getState() != PlayerFishEvent.State.BITE) {
             return;
         }
 
@@ -233,20 +242,16 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         ItemStack offHand = player.getInventory().getItemInOffHand();
 
         boolean consumed = false;
-        if (isStrikeRod(mainHand)) {
+        if (mainHand.getType() == Material.FISHING_ROD && isStrikeRod(mainHand)) {
             mainHand.setAmount(mainHand.getAmount() - 1);
             consumed = true;
-        } else if (isStrikeRod(offHand)) {
+        } else if (offHand.getType() == Material.FISHING_ROD && isStrikeRod(offHand)) {
             offHand.setAmount(offHand.getAmount() - 1);
             consumed = true;
         }
 
         if (consumed) {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
-            player.getWorld().spawnParticle(Particle.ITEM,
-                    player.getEyeLocation().add(0, -0.5, 0),
-                    20, 0.3, 0.3, 0.3, 0.1,
-                    new ItemStack(Material.FISHING_ROD));
         }
 
         Location target = getTargetLocation(player);
@@ -274,22 +279,54 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         }
     }
 
+    @EventHandler
+    public void onArmorStandPlace(EntityPlaceEvent event) {
+        if (!(event.getEntity() instanceof ArmorStand armorStand)) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        if (player == null) {
+            return;
+        }
+
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item.getType() != Material.ARMOR_STAND) {
+            item = player.getInventory().getItemInOffHand();
+        }
+
+        if (!isStrikeRod(item) || !getStrikeType(item).equals("chunkeater")) {
+            return;
+        }
+
+        Location target = armorStand.getLocation();
+        armorStand.remove();
+        sendMessage(player, "incoming", Map.of("{TYPE}", "CHUNKEATER"));
+        executeChunkEaterStrike(player, target);
+    }
+
+    private void executeChunkEaterStrike(Player player, Location target) {
+        Bukkit.getScheduler().runTask(this, () -> {
+            spawnChunkEater(target.getWorld(), target);
+        });
+    }
+
     private void executeStrike(Player player, ItemStack item, String type, Location target) {
         sendMessage(player, "incoming", Map.of("{TYPE}", type.toUpperCase()));
 
-        if (!config.getBoolean("rod.throw-rod", true)) {
+        if (!type.equals("chunkeater") && !config.getBoolean("rod.throw-rod", true)) {
             consumeRodDelayed(player, item);
         }
 
         UUID strikeId = UUID.randomUUID();
         Set<UUID> tntList = new HashSet<>();
         strikeTNT.put(strikeId, tntList);
-
         Bukkit.getScheduler().runTask(this, () -> {
             switch (type) {
                 case "nuke" -> spawnNuke(target.getWorld(), target, strikeId, tntList);
                 case "stab" -> spawnStab(target.getWorld(), target);
                 case "dogs" -> spawnDogs(target.getWorld(), target, player);
+                case "chunkeater" -> spawnChunkEater(target.getWorld(), target);
             }
 
             Bukkit.getScheduler().runTaskLater(this, () -> strikeTNT.remove(strikeId), 200L);
@@ -542,7 +579,45 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
             }
         }
     }
+    private void spawnChunkEater(World world, Location center) {
+        Location ground = findGroundLevel(world, center);
+        Chunk chunk = ground.getChunk();
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
 
+        int chunkX = chunk.getX() << 4;
+        int chunkZ = chunk.getZ() << 4;
+
+        int tntAmount = (250);
+        Random random = new Random();
+
+        for (int i = 0; i < tntAmount; i++) {
+            double x = chunkX + random.nextDouble() * 16;
+            double z = chunkZ + random.nextDouble() * 16;
+            double y = center.getY() + 35;
+
+            Location tntLoc = new Location(world, x, y, z);
+            TNTPrimed tnt = (TNTPrimed) world.spawnEntity(tntLoc, EntityType.TNT);
+            tnt.setFuseTicks(90);
+            tnt.setYield(2.0f);
+        }
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (!chunk.isLoaded()) chunk.load();
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    for (int y = minY + 1; y < maxY; y++) {
+
+                        Material blockType = chunk.getBlock(x, y, z).getType();
+                        if (blockType != Material.BEDROCK) {
+                            chunk.getBlock(x, y, z).setType(Material.AIR, false);
+                        }
+                    }
+                }
+            }
+        }, 100L);
+    }
+    
     private boolean hasPermission(Player player) {
         return player.hasPermission(config.getString("permission", "orbital.use"));
     }
@@ -558,42 +633,50 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     }
 
     private ItemStack createStrikeRod(String type) {
-        ItemStack rod = new ItemStack(Material.FISHING_ROD);
-        ItemMeta meta = rod.getItemMeta();
+        Material material = type.equals("chunkeater") ? Material.ARMOR_STAND : Material.FISHING_ROD;
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
 
         String displayName = switch (type) {
-            case "nuke" -> "§fNuke shot";
-            case "stab" -> "§fStab shot";
-            case "dogs" -> "§fDog shot";
-            default -> "§fOrbital Strike Rod";
+            case "nuke" -> "Nuke shot";
+            case "stab" -> "Stab shot";
+            case "dogs" -> "Dog shot";
+            case "chunkeater" -> "Chunk Eater";
+            default -> "Orbital Strike Rod";
         };
 
         meta.setDisplayName(displayName);
         meta.setCustomModelData(CUSTOM_MODEL_DATA);
-        rod.setItemMeta(meta);
-        rod.setDurability((short) 63);
+        item.setItemMeta(meta);
 
-        return rod;
+        if (material == Material.FISHING_ROD) {
+            item.setDurability((short) 63);
+        }
+
+        return item;
     }
 
     private boolean isStrikeRod(ItemStack item) {
-        if (item == null || item.getType() != Material.FISHING_ROD || !item.hasItemMeta()) return false;
+        if (item == null || !item.hasItemMeta()) return false;
         ItemMeta meta = item.getItemMeta();
-        return meta.hasDisplayName() && meta.hasCustomModelData() && meta.getCustomModelData() == CUSTOM_MODEL_DATA;
+        if (!meta.hasDisplayName() || !meta.hasCustomModelData() || meta.getCustomModelData() != CUSTOM_MODEL_DATA) return false;
+        Material type = item.getType();
+        return type == Material.FISHING_ROD || type == Material.ARMOR_STAND;
     }
 
     private String getStrikeType(ItemStack item) {
         String displayName = item.getItemMeta().getDisplayName();
         return switch (displayName) {
-            case "§fNuke shot" -> "nuke";
-            case "§fStab shot" -> "stab";
-            case "§fDog shot" -> "dogs";
+            case "Nuke shot" -> "nuke";
+            case "Stab shot" -> "stab";
+            case "Dog shot" -> "dogs";
+            case "Chunk Eater" -> "chunkeater";
             default -> null;
         };
     }
 
     private Location getTargetLocation(Player player) {
-        int distance = config.getInt("rod.distance", 256);
+        int distance = config.getInt("rod.distance", 100);
         RayTraceResult result = player.rayTraceBlocks(distance);
         if (result == null || result.getHitBlock() == null) return null;
         return result.getHitBlock().getLocation().add(0, 60, 0);

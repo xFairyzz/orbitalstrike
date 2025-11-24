@@ -13,7 +13,7 @@ nuke:
   tnt-per-ring-increase: 2
   center-tnt: true
   fuse-fallback-ticks: 160 # needs 8 Seconds to explode (20 ticks = 1 Second) (20x8=160)
-  Animated-rings: false
+  Animated-rings: true
 
 stab:
   yield: 4.0
