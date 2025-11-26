@@ -1,12 +1,13 @@
 # OrbitalStrike Minecraft Plugin
 
 **Epic orbital strikes like Wemmbu — Nuke & Stab or Dog Cannon Like Flamefrags!**  
-A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating fishing rod weapons:
+A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring four devastating weapons:
 ###### Should work on any Spigot fork like Paper or Purpur  if not Message me on Discord or open a issue here
 
 - `/orbital nuke` → **Massive crater with 10 rings + center TNT**
 - `/orbital stab` → **Instant full-depth tunnel to bedrock**
 - `/orbital dogs` → **50+ wolves ready to Help you**
+- `/orbital chunkeater` → **Armorstand ready to destroy the whole Chunk**
 ---
 
 ## Features
@@ -16,6 +17,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 | **Nuke Strike** | 10 rings + center, all TNT drops simultaneously from above, explodes **2 seconds after impact** |
 | **Stab Strike** | Instant tunnel straight down to bedrock                                                         |
 | **Dogs Strike** | Summons **50+ tamed wolves** with **Speed II + Strength II**                                    |
+| **Chunkeater** | Powerful Armorstand that destroys a whole Chunk                                                                     |
 | **One-Time Use** | Rod breaks after single use                                                                     |
 | **Fully Configurable** | `config.yml` for rings, yield, height, delay                                                    |
 | **Permission System** | `orbital.use` — easy with LuckPerms                                                             |
@@ -25,7 +27,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 
 ## Installation
 
-1. Download `OrbitalStrike-1.4.1.jar`
+1. Download `OrbitalStrike-1.4.0.jar`
 2. Place it in your `plugins/` folder
 3. Go into **"spigot.yml"** and set **"max-tnt-per-tick"** to **1000** else it might cause problems
 4. **Start the server**
@@ -40,6 +42,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 | `/orbital nuke` | Gives you a **Nuke Rod** |
 | `/orbital stab` | Gives you a **Stab Rod** |
 | `/orbital dogs` | Gives you a **Dog Rod** |
+| `/orbital chunkeater` | Gives you a **Chunkeater Armorstand** |
 
 > **Permission:** `orbital.use`  
 > → Default: **OPs only**  
@@ -65,7 +68,7 @@ nuke:
   tnt-per-ring-increase: 2
   center-tnt: true
   fuse-fallback-ticks: 160 # needs 8 Seconds to explode (20 ticks = 1 Second) (20x8=160)
-  Animated-rings: false
+  Animated-rings: true
 
 stab:
   yield: 4.0
