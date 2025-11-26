@@ -26,6 +26,7 @@ dogs:
   effects:
     - "SPEED:1"
     - "STRENGTH:2"
+    - "ABSORPTION:99"
 
 messages:
   received: "§aYou received an Orbital Strike Rod - §l{TYPE}§a!"

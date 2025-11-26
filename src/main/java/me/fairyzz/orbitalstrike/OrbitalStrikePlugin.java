@@ -39,7 +39,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
     private FileConfiguration config;
 
     private static final String GITHUB_REPO = "xFairyzz/orbitalstrike";
-    private static final String CURRENT_VERSION = "v1.4.0";
+    private static final String CURRENT_VERSION = "v1.4.1";
     private boolean hasUpdate = false;
     private String latestVersion = "";
 
@@ -534,7 +534,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         List<String> effectStrings = config.getStringList("dogs.effects");
         List<PotionEffect> effects = new ArrayList<>();
 
-        for (int i = 0; i < Math.min(effectStrings.size(), 2); i++) {
+        for (int i = 0; i < Math.min(effectStrings.size(), 3); i++) {
             String entry = effectStrings.get(i).trim().toUpperCase();
             String[] parts = entry.split(":");
             if (parts.length != 2) continue;
@@ -765,6 +765,7 @@ public class OrbitalStrikePlugin extends JavaPlugin implements CommandExecutor, 
         List<String> effects = new ArrayList<>();
         effects.add("SPEED:1");
         effects.add("STRENGTH:2");
+        effects.add("ABSORPTION:99");
         dogs.put("effects", effects);
 
         config.addDefault("dogs", dogs);

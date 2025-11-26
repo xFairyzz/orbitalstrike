@@ -25,7 +25,7 @@ A powerful Plugin for **Minecraft 1.21.1 - 1.21.10** featuring three devastating
 
 ## Installation
 
-1. Download `OrbitalStrike-1.3.0.jar`
+1. Download `OrbitalStrike-1.4.1.jar`
 2. Place it in your `plugins/` folder
 3. Go into **"spigot.yml"** and set **"max-tnt-per-tick"** to **1000** else it might cause problems
 4. **Start the server**
@@ -78,6 +78,7 @@ dogs:
   effects:
     - "SPEED:1"
     - "STRENGTH:2"
+    - "ABSORPTION:99"
 
 messages:
   received: "§aYou received an Orbital Strike Rod - §l{TYPE}§a!"
